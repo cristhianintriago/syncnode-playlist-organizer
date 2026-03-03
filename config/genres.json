@@ -1,0 +1,142 @@
+{
+  "tags_ignorar": [
+    "seen live", "favorites", "favourite", "awesome", "love", "loved",
+    "beautiful", "chill", "chillout", "workout", "party", "running",
+    "study", "studying", "sad", "happy", "relax", "relaxing", "sleep",
+    "driving", "summer", "winter", "night", "morning", "vibes", "good",
+    "best", "classic", "oldies", "new", "english", "american", "british",
+    "female vocalist", "male vocalist", "singer-songwriter", "instrumental",
+    "acoustic", "vocals", "good music", "catchy", "melancholic", "energetic",
+    "mellow", "upbeat", "slow", "fast", "sin género", "under 2000 listeners"
+  ],
+  "genre_map": {
+    "Hip Hop / Rap": [
+      "hip hop", "hip-hop", "rap", "trap", "emo rap", "emo-rap", "cloud rap",
+      "cloud-rap", "drill", "uk drill", "mumble rap", "lo-fi hip hop",
+      "boom bap", "boom-bap", "gangsta rap", "gangsta", "conscious hip hop",
+      "crunk", "phonk", "pluggnb", "plugg", "rage rap", "sad rap",
+      "underground hip hop", "underground rap", "west coast rap", "west coast",
+      "east coast hip hop", "east coast", "alternative hip hop", "alt rap",
+      "lo-fi beats", "trap music", "southern hip hop", "southern rap",
+      "hyphy", "g-funk", "dirty south", "memphis rap", "horrorcore",
+      "abstract hip hop", "jazzy hip hop", "jazz rap", "political hip hop",
+      "freestyle", "battle rap", "new york rap", "chicago rap",
+      "atlanta hip hop", "miami bass", "hip hop soul", "rap rock", "rap metal",
+      "nerdcore", "chillhop", "lofi hip hop", "lo fi hip hop", "melodic rap",
+      "sad trap", "emo trap", "rage", "country rap"
+    ],
+    "Reggaeton / Latin": [
+      "reggaeton", "latin", "latin pop", "latin trap", "latin hip hop",
+      "cumbia", "salsa", "bachata", "dembow", "urbano latino", "urbano",
+      "latin urban", "latin urban music", "musica urbana", "música urbana",
+      "trap latino", "trap latin", "corridos", "corridos tumbados",
+      "banda", "norteno", "norteño", "grupero", "regional mexicano",
+      "merengue", "vallenato", "ranchera", "mariachi", "tejano",
+      "latin alternative", "latin rock", "latin jazz", "latin soul",
+      "latin funk", "nueva cancion", "nueva canción", "flamenco",
+      "spanish pop", "pop latino", "pop en español", "latin r&b",
+      "afrobeats", "dancehall", "reggae", "roots reggae", "ska", "dub",
+      "perreo", "guaracha", "champeta", "cumbia villera",
+      "latin electronic", "latin edm", "moombahton", "tropical",
+      "bolero", "son cubano", "mambo", "cha-cha", "rumba", "samba",
+      "axe", "forró", "pagode", "mpb", "musica popular brasileira",
+      "latin gospel", "latin indie", "indie latino"
+    ],
+    "Pop": [
+      "pop", "dance pop", "electropop", "synth-pop", "synthpop", "indie pop",
+      "art pop", "dream pop", "chamber pop", "baroque pop", "bubblegum pop",
+      "k-pop", "kpop", "j-pop", "jpop", "teen pop", "pop rock", "power pop",
+      "adult contemporary", "contemporary pop", "mainstream pop", "britpop",
+      "boy band", "girl group", "europop", "euro pop", "disco pop",
+      "electro pop", "hyperpop", "lo-fi pop", "sad pop", "dark pop",
+      "glam pop", "sophisti-pop", "new wave pop", "jangle pop",
+      "orchestral pop", "city pop", "japanese pop", "mandopop",
+      "cantopop", "c-pop", "pop punk", "pop emo"
+    ],
+    "Rock": [
+      "rock", "indie rock", "alternative rock", "alt rock", "classic rock",
+      "hard rock", "punk rock", "punk", "post-punk", "grunge", "emo",
+      "hardcore", "hardcore punk", "metal", "heavy metal", "death metal",
+      "black metal", "metalcore", "deathcore", "post-rock", "psychedelic rock",
+      "psychedelic", "garage rock", "shoegaze", "math rock", "noise rock",
+      "stoner rock", "doom metal", "thrash metal", "speed metal", "glam rock",
+      "glam metal", "hair metal", "arena rock", "southern rock", "blues rock",
+      "surf rock", "rockabilly", "new wave", "post-hardcore", "screamo",
+      "progressive rock", "prog rock", "art rock", "ambient rock", "space rock",
+      "industrial rock", "gothic rock", "goth", "darkwave", "coldwave",
+      "nu metal", "rap rock", "funk rock", "jazz rock", "experimental rock",
+      "noise", "rock and roll", "rock n roll", "rock & roll",
+      "alternative metal", "sludge metal", "power metal", "symphonic metal",
+      "folk metal", "viking metal"
+    ],
+    "Electrónica / Dance": [
+      "electronic", "edm", "house", "deep house", "tech house", "future house",
+      "progressive house", "tropical house", "electro house", "techno",
+      "trance", "progressive trance", "psytrance", "goa trance", "dubstep",
+      "brostep", "drum and bass", "dnb", "d&b", "jungle", "liquid dnb",
+      "ambient", "experimental electronic", "hardstyle", "synthwave",
+      "retrowave", "outrun", "vaporwave", "chillwave", "lo-fi", "lofi",
+      "idm", "intelligent dance music", "electro", "electroclash",
+      "industrial", "ebm", "witch house", "future bass", "trap edm",
+      "glitch hop", "breakbeat", "breaks", "big beat", "rave", "club",
+      "dance", "disco", "nu-disco", "funky house", "soulful house",
+      "garage", "uk garage", "2-step", "grime", "bassline",
+      "minimal techno", "dub techno", "acid house", "acid techno",
+      "chicago house", "detroit techno", "berlin techno", "melodic techno",
+      "afro house", "electronica", "indietronica", "new rave"
+    ],
+    "R&B / Soul": [
+      "r&b", "rnb", "soul", "neo soul", "contemporary r&b", "funk",
+      "motown", "gospel", "blues", "rhythm and blues", "quiet storm",
+      "new jack swing", "trip hop", "downtempo", "nu-soul",
+      "alternative r&b", "alt r&b", "indie r&b", "dark r&b",
+      "bedroom r&b", "future r&b", "trap soul", "emo r&b",
+      "old school r&b", "classic soul", "deep soul", "southern soul",
+      "chicago blues", "delta blues", "electric blues", "urban contemporary"
+    ],
+    "Indie / Alternativo": [
+      "indie", "alternative", "indie folk", "lo-fi indie", "slacker rock",
+      "noise pop", "sadcore", "slowcore", "twee pop", "dream rock",
+      "psych pop", "indie electronic", "indie dance", "indie r&b", "indie soul"
+    ],
+    "Folk / Country": [
+      "folk", "country", "americana", "bluegrass", "singer-songwriter",
+      "country pop", "outlaw country", "folk pop", "neofolk", "new folk",
+      "anti-folk", "contemporary folk", "traditional folk", "celtic",
+      "irish folk", "british folk", "appalachian", "cowboy", "honky tonk",
+      "alt-country", "alt country", "country rock", "country blues",
+      "folk blues", "progressive folk"
+    ],
+    "Jazz / Clásica": [
+      "jazz", "classical", "orchestral", "opera", "swing", "bebop",
+      "contemporary classical", "modern classical", "neoclassical", "baroque",
+      "minimalist classical", "big band", "latin jazz", "free jazz",
+      "fusion", "jazz fusion", "smooth jazz", "cool jazz", "hard bop",
+      "modal jazz", "acid jazz", "nu jazz", "jazz pop", "chamber music",
+      "symphony", "concerto"
+    ]
+  },
+  "audio_features_rules": {
+    "Electrónica / Dance": { "energy_min": 0.75, "danceability_min": 0.70 },
+    "Reggaeton / Latin":   { "danceability_min": 0.75, "tempo_min": 85, "tempo_max": 135 },
+    "Rock":                { "energy_min": 0.80, "tempo_min": 140 },
+    "R&B / Soul":          { "valence_max": 0.40, "energy_max": 0.55 }
+  },
+  "language": {
+    "subdivide_genres": ["Hip Hop / Rap", "Rock", "Pop", "R&B / Soul"],
+    "min_tracks": 15,
+    "spanish_tags": [
+      "spanish", "en español", "en espanol", "latino", "latina", "hispanico",
+      "habla hispana", "mexican", "colombian", "argentinian", "chilean",
+      "peruvian", "venezuelan", "ecuadorian", "dominican", "puerto rican",
+      "cuban", "spanish rap", "spanish hip hop", "trap en español",
+      "rap en español", "musica urbana", "urbano", "trap latino",
+      "rock en español", "pop en español", "indie en español"
+    ],
+    "english_tags": [
+      "english", "british", "american", "usa", "uk", "canadian", "australian",
+      "american rapper", "british rapper", "english rap", "american hip hop",
+      "american rock", "american pop", "us rap", "uk rap"
+    ]
+  }
+}
