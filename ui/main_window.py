@@ -1,48 +1,51 @@
 """
-SyncNode 2.0 — Premium UI
-Estética: Luxury dark, oro/champagne sobre negro profundo.
-Animaciones: Partículas en splash, barras animadas, fade de nav.
+SyncNode — UI inspirada en Apple Music: negro profundo, acentos azules, tipografía clara.
 """
 
 import customtkinter as ctk
 from tkinter import messagebox, Canvas
 import threading
 import random
+import json
+import os
 
 ctk.set_appearance_mode("Dark")
 ctk.set_default_color_theme("dark-blue")
 
-# ─────────────────────────────────────────────────────────────
-# PALETA PREMIUM
-# ─────────────────────────────────────────────────────────────
+CONFIG_FILE = "config.json"
+
+# Paleta tipo Apple Music (dark + azules)
 C = {
-    "bg":         "#080810",
-    "bg2":        "#0D0D1A",
-    "sidebar":    "#06060E",
-    "card":       "#0F0F1E",
-    "card_h":     "#14142A",
-    "oro":        "#C9A84C",
-    "oro_claro":  "#E2C97E",
-    "oro_oscuro": "#7A5C10",
-    "blanco":     "#EDE8E0",
-    "gris":       "#64648A",
-    "gris2":      "#2A2A42",
-    "acento":     "#6B4FA0",
-    "error":      "#A93226",
-    "verde":      "#1DB954",
+    "bg":           "#000000",
+    "bg_elevated":  "#0d0d0d",
+    "bg2":          "#1c1c1e",
+    "sidebar":      "#161616",
+    "card":         "#1c1c1e",
+    "card_h":       "#2c2c2e",
+    "nav_sel":      "#2c2c2e",
+    "nav_hover":    "#252528",
+    "accent":       "#0A84FF",
+    "accent_hover": "#64B5FF",
+    "accent_muted": "#1a3a5c",
+    "accent2":      "#5E5CE6",
+    "text":         "#F5F5F7",
+    "text_sec":     "#8E8E93",
+    "separator":    "#38383a",
+    "error":        "#FF453A",
+    "success":      "#32D74B",
 }
 
 GEMS = {
-    "Hip Hop / Rap":       "#C9940A",
-    "Reggaeton / Latin":   "#B03A2E",
-    "Pop":                 "#7D3C98",
-    "Rock":                "#1F618D",
-    "Electrónica / Dance": "#117864",
-    "R&B / Soul":          "#CA6F1E",
-    "Indie / Alternativo": "#1E8449",
-    "Folk / Country":      "#7D6608",
-    "Jazz / Clásica":      "#154360",
-    "Otros":               "#424268",
+    "Hip Hop / Rap":       "#5AC8FA",
+    "Reggaeton / Latin":   "#0A84FF",
+    "Pop":                 "#BF5AF2",
+    "Rock":                "#64D2FF",
+    "Electrónica / Dance": "#30D158",
+    "R&B / Soul":          "#FF9F0A",
+    "Indie / Alternativo": "#5E5CE6",
+    "Folk / Country":      "#AC8E68",
+    "Jazz / Clásica":      "#98989D",
+    "Otros":               "#48484A",
 }
 
 def gem(nombre: str) -> str:
@@ -57,60 +60,87 @@ def gem(nombre: str) -> str:
 # ─────────────────────────────────────────────────────────────
 
 class SplashScreen(ctk.CTkToplevel):
+    """
+    Splash: partículas en canvas a pantalla completa; textos y barra con CTk
+    centrados con place(anchor='center'). Evita el bug de Tk donde un canvas
+    expandido alinea el dibujo (coord. fijas) a la izquierda del widget.
+    """
+
     def __init__(self, parent):
         super().__init__(parent)
         self.overrideredirect(True)
         self.configure(fg_color=C["bg"])
         self.attributes("-topmost", True)
 
-        W, H = 500, 360
+        W, H = 520, 380
         sw = self.winfo_screenwidth()
         sh = self.winfo_screenheight()
         self.geometry(f"{W}x{H}+{(sw-W)//2}+{(sh-H)//2}")
+        self.resizable(False, False)
 
         self.W, self.H = W, H
-        self.cv = Canvas(self, width=W, height=H, bg=C["bg"], highlightthickness=0)
-        self.cv.pack(fill="both", expand=True)
-
-        # Partículas
         self._parts = [
             {
                 "x": random.uniform(0, W),
                 "y": random.uniform(0, H),
-                "vx": random.uniform(-0.3, 0.3),
-                "vy": random.uniform(-0.5, -0.1),
-                "r": random.uniform(1, 2.5),
+                "vx": random.uniform(-0.25, 0.25),
+                "vy": random.uniform(-0.45, -0.08),
+                "r": random.uniform(1, 2.2),
             }
-            for _ in range(45)
+            for _ in range(40)
         ]
 
-        # Elementos fijos
-        self.cv.create_text(W//2, 110, text="◈", font=("Georgia", 64),
-                            fill=C["oro"], tags="fijo")
-        self.cv.create_text(W//2, 185, text="SYNCNODE",
-                            font=("Georgia", 30, "bold"),
-                            fill=C["blanco"], tags="fijo")
-        self.cv.create_text(W//2, 215, text="Tu música. Organizada con elegancia.",
-                            font=("Helvetica", 11), fill=C["gris"], tags="fijo")
+        # Fondo: canvas solo para partículas (rellena el área del cliente)
+        self.cv = Canvas(self, highlightthickness=0, bg=C["bg"])
+        self.cv.place(relx=0, rely=0, relwidth=1, relheight=1)
 
-        # Líneas decorativas
-        self.cv.create_line(60, 155, 190, 155, fill=C["oro_oscuro"], width=1, tags="fijo")
-        self.cv.create_line(310, 155, 440, 155, fill=C["oro_oscuro"], width=1, tags="fijo")
+        # Contenido centrado en la ventana (no depende del sistema de coords. del canvas)
+        box = ctk.CTkFrame(self, fg_color="transparent")
+        box.place(relx=0.5, rely=0.5, anchor="center")
 
-        # Barra progreso
-        self.cv.create_rectangle(80, 270, 420, 278,
-                                  fill=C["gris2"], outline="", tags="fijo")
-        self._barra = self.cv.create_rectangle(80, 270, 80, 278,
-                                                fill=C["oro"], outline="")
-        self._txt   = self.cv.create_text(W//2, 295, text="Iniciando...",
-                                           font=("Helvetica", 10), fill=C["gris"])
+        ctk.CTkLabel(
+            box, text="♪", font=ctk.CTkFont("Segoe UI", 48),
+            text_color=C["accent"], fg_color="transparent",
+        ).pack()
+        ctk.CTkLabel(
+            box, text="SyncNode",
+            font=ctk.CTkFont("Segoe UI", 22, weight="bold"),
+            text_color=C["text"], fg_color="transparent",
+        ).pack(pady=(4, 0))
+        ctk.CTkLabel(
+            box, text="Organiza tu música con Spotify",
+            font=ctk.CTkFont("Segoe UI", 11),
+            text_color=C["text_sec"], fg_color="transparent",
+        ).pack(pady=(6, 0))
+
+        self._prog = ctk.CTkProgressBar(
+            box, width=280, height=5,
+            fg_color=C["separator"],
+            progress_color=C["accent"],
+            corner_radius=3,
+        )
+        self._prog.pack(pady=(20, 8))
+        self._prog.set(0)
+
+        self._lbl_estado = ctk.CTkLabel(
+            box, text="Iniciando…",
+            font=ctk.CTkFont("Segoe UI", 10),
+            text_color=C["text_sec"], fg_color="transparent",
+        )
+        self._lbl_estado.pack()
 
         self._animar()
 
     def _animar(self):
         if not self.winfo_exists():
             return
-        W, H = self.W, self.H
+        try:
+            W = max(2, self.cv.winfo_width())
+            H = max(2, self.cv.winfo_height())
+        except Exception:
+            W, H = self.W, self.H
+        self.W, self.H = W, H
+
         self.cv.delete("part")
         for p in self._parts:
             p["x"] += p["vx"]
@@ -121,20 +151,18 @@ class SplashScreen(ctk.CTkToplevel):
             if not (0 <= p["x"] <= W):
                 p["vx"] *= -1
             r = p["r"]
-            self.cv.create_oval(p["x"]-r, p["y"]-r, p["x"]+r, p["y"]+r,
-                                 fill=C["oro_oscuro"], outline="", tags="part")
+            self.cv.create_oval(
+                p["x"] - r, p["y"] - r, p["x"] + r, p["y"] + r,
+                fill=C["accent_muted"], outline="", tags="part",
+            )
 
-        self.cv.tag_raise("fijo")
-        self.cv.tag_raise(self._barra)
-        self.cv.tag_raise(self._txt)
-        self.after(30, self._animar)
+        self.after(32, self._animar)
 
     def actualizar(self, prog: float, msg: str):
         if not self.winfo_exists():
             return
-        x = 80 + (340 * min(prog, 1.0))
-        self.cv.coords(self._barra, 80, 270, x, 278)
-        self.cv.itemconfig(self._txt, text=msg)
+        self._prog.set(min(prog, 1.0))
+        self._lbl_estado.configure(text=msg)
 
     def cerrar(self):
         try:
@@ -147,39 +175,39 @@ class SplashScreen(ctk.CTkToplevel):
 # COMPONENTES
 # ─────────────────────────────────────────────────────────────
 
-class GoldBtn(ctk.CTkButton):
+class PrimaryBtn(ctk.CTkButton):
     def __init__(self, parent, **kw):
-        kw.setdefault("fg_color", C["oro"])
-        kw.setdefault("hover_color", C["oro_claro"])
-        kw.setdefault("text_color", C["bg"])
-        kw.setdefault("font", ctk.CTkFont("Helvetica", 12, weight="bold"))
-        kw.setdefault("corner_radius", 6)
-        kw.setdefault("height", 40)
+        kw.setdefault("fg_color", C["accent"])
+        kw.setdefault("hover_color", C["accent_hover"])
+        kw.setdefault("text_color", "#FFFFFF")
+        kw.setdefault("font", ctk.CTkFont("Segoe UI", 12, weight="bold"))
+        kw.setdefault("corner_radius", 22)
+        kw.setdefault("height", 44)
         super().__init__(parent, **kw)
 
 
-class GhostBtn(ctk.CTkButton):
+class SecondaryBtn(ctk.CTkButton):
     def __init__(self, parent, **kw):
         kw.setdefault("fg_color", "transparent")
-        kw.setdefault("hover_color", C["card_h"])
-        kw.setdefault("text_color", C["oro"])
-        kw.setdefault("border_color", C["oro_oscuro"])
+        kw.setdefault("hover_color", C["nav_hover"])
+        kw.setdefault("text_color", C["accent"])
+        kw.setdefault("border_color", C["separator"])
         kw.setdefault("border_width", 1)
-        kw.setdefault("font", ctk.CTkFont("Helvetica", 11))
-        kw.setdefault("corner_radius", 6)
-        kw.setdefault("height", 34)
+        kw.setdefault("font", ctk.CTkFont("Segoe UI", 11))
+        kw.setdefault("corner_radius", 22)
+        kw.setdefault("height", 36)
         super().__init__(parent, **kw)
 
 
 class StatCard(ctk.CTkFrame):
     def __init__(self, parent, label: str, valor: str, color: str, **kw):
-        super().__init__(parent, fg_color=C["card"], corner_radius=10,
-                         border_width=1, border_color=C["gris2"], **kw)
+        super().__init__(parent, fg_color=C["bg2"], corner_radius=14,
+                         border_width=0, **kw)
         ctk.CTkFrame(self, height=2, fg_color=color, corner_radius=0).pack(fill="x")
-        ctk.CTkLabel(self, text=label, font=ctk.CTkFont("Helvetica", 9),
-                     text_color=C["gris"]).pack(anchor="w", padx=16, pady=(12, 2))
+        ctk.CTkLabel(self, text=label, font=ctk.CTkFont("Segoe UI", 9),
+                     text_color=C["text_sec"]).pack(anchor="w", padx=16, pady=(12, 2))
         self._v = ctk.CTkLabel(self, text=valor,
-                                font=ctk.CTkFont("Georgia", 28, weight="bold"),
+                                font=ctk.CTkFont("Segoe UI", 28, weight="bold"),
                                 text_color=color)
         self._v.pack(anchor="w", padx=16, pady=(0, 14))
 
@@ -195,11 +223,11 @@ class GenreBar(ctk.CTkFrame):
         pct   = cantidad / total if total > 0 else 0
         label = (nombre[:25] + "…") if len(nombre) > 25 else nombre
 
-        ctk.CTkLabel(self, text=label, font=ctk.CTkFont("Helvetica", 11),
-                     text_color=C["blanco"], width=165, anchor="w"
+        ctk.CTkLabel(self, text=label, font=ctk.CTkFont("Segoe UI", 11),
+                     text_color=C["text"], width=165, anchor="w"
                      ).grid(row=0, column=0, padx=(0, 10))
 
-        rail = ctk.CTkFrame(self, fg_color=C["gris2"], corner_radius=2, height=5)
+        rail = ctk.CTkFrame(self, fg_color=C["separator"], corner_radius=2, height=5)
         rail.grid(row=0, column=1, sticky="ew", padx=(0, 10))
         rail.grid_propagate(False)
 
@@ -209,7 +237,7 @@ class GenreBar(ctk.CTkFrame):
         self.after(60, self._tick)
 
         ctk.CTkLabel(self, text=f"{cantidad:,}",
-                     font=ctk.CTkFont("Helvetica", 11, weight="bold"),
+                     font=ctk.CTkFont("Segoe UI", 11, weight="bold"),
                      text_color=color, width=55, anchor="e"
                      ).grid(row=0, column=2)
 
@@ -230,99 +258,224 @@ class GenreBar(ctk.CTkFrame):
 class VentanaPrincipal(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.title("SyncNode 2.0")
+        self.title("SyncNode")
         self.geometry("1240x800")
-        self.minsize(1040, 700)
+        self.minsize(880, 620)
         self.configure(fg_color=C["bg"])
 
         self.controlador = None
         self.cbs_gen     = []
         self.cbs_art     = []
+        self.sidebar     = None
+        self._resize_after = None
+        self._vista_actual = "conexion"
+        self._nav_refs     = {}
 
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
 
         self._mk_sidebar()
         self._mk_vistas()
+        self._mk_footer()
         self._ir("conexion")
+
+        self.bind("<Configure>", self._on_root_configure)
 
     def vincular_controlador(self, ctrl):
         self.controlador = ctrl
+        if self.sidebar and hasattr(self, "sw_prueba"):
+            if ctrl.spotify.modo_prueba:
+                self.sw_prueba.select()
+            else:
+                self.sw_prueba.deselect()
+            self._refresh_slider_prueba()
+
+    def _on_root_configure(self, event):
+        if event.widget is not self:
+            return
+        if self._resize_after is not None:
+            self.after_cancel(self._resize_after)
+        self._resize_after = self.after(120, self._apply_window_size)
+
+    def _apply_window_size(self):
+        self._resize_after = None
+        w = self.winfo_width()
+        if not self.sidebar:
+            return
+        if w < 1000:
+            self.sidebar.configure(width=212)
+        else:
+            self.sidebar.configure(width=244)
+
+    def _mk_footer(self):
+        bar = ctk.CTkFrame(self, fg_color=C["sidebar"], corner_radius=0, height=40)
+        bar.grid(row=1, column=0, columnspan=2, sticky="ew")
+        bar.grid_propagate(False)
+        ctk.CTkLabel(
+            bar,
+            text="By Klyro — Derechos reservados",
+            font=ctk.CTkFont("Segoe UI", 11),
+            text_color=C["text_sec"],
+        ).pack(side="right", padx=20, pady=10)
+        ctk.CTkLabel(
+            bar,
+            text="Spotify",
+            font=ctk.CTkFont("Segoe UI", 11),
+            text_color=C["text_sec"],
+        ).pack(side="left", padx=20, pady=10)
+
+    def _persist_modo_prueba(self, activo: bool):
+        if self.controlador:
+            self.controlador.spotify.modo_prueba = activo
+        try:
+            path = CONFIG_FILE
+            with open(path, "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+            cfg["modo_prueba"] = activo
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(cfg, f, indent=2, ensure_ascii=False)
+        except Exception:
+            pass
+        self._refresh_slider_prueba()
+
+    def _refresh_slider_prueba(self):
+        if not hasattr(self, "slider"):
+            return
+        prueba = (
+            self.controlador.spotify.modo_prueba
+            if self.controlador
+            else False
+        )
+        if prueba:
+            self.slider.configure(from_=10, to=40, number_of_steps=30)
+            self.slider.set(min(int(self.slider.get()), 40))
+            self.lbl_cant.configure(text=str(int(self.slider.get())))
+        else:
+            self.slider.configure(from_=10, to=200, number_of_steps=19)
 
     # ── SIDEBAR ──────────────────────────────
 
     def _mk_sidebar(self):
-        sb = ctk.CTkFrame(self, width=232, fg_color=C["sidebar"], corner_radius=0)
+        sb = ctk.CTkFrame(self, width=244, fg_color=C["sidebar"], corner_radius=0)
         sb.grid(row=0, column=0, sticky="nsew")
         sb.grid_propagate(False)
         sb.grid_rowconfigure(7, weight=1)
+        self.sidebar = sb
 
-        # Logo
         lg = ctk.CTkFrame(sb, fg_color="transparent")
-        lg.grid(row=0, column=0, sticky="ew", padx=22, pady=(34, 2))
-        ctk.CTkLabel(lg, text="◈ ", font=ctk.CTkFont("Georgia", 24),
-                     text_color=C["oro"]).pack(side="left")
-        ctk.CTkLabel(lg, text="SYNCNODE", font=ctk.CTkFont("Georgia", 17, weight="bold"),
-                     text_color=C["blanco"]).pack(side="left")
+        lg.grid(row=0, column=0, sticky="ew", padx=20, pady=(28, 4))
+        ctk.CTkLabel(lg, text="♪ ", font=ctk.CTkFont("Segoe UI", 20),
+                     text_color=C["accent"]).pack(side="left")
+        ctk.CTkLabel(lg, text="SyncNode", font=ctk.CTkFont("Segoe UI", 17, weight="bold"),
+                     text_color=C["text"]).pack(side="left")
 
-        ctk.CTkLabel(sb, text="M U S I C   O R G A N I Z E R",
-                     font=ctk.CTkFont("Helvetica", 7),
-                     text_color=C["oro_oscuro"]
-                     ).grid(row=1, column=0, sticky="w", padx=22, pady=(0, 22))
-
-        ctk.CTkFrame(sb, height=1, fg_color=C["gris2"]
-                     ).grid(row=2, column=0, sticky="ew", padx=18, pady=(0, 18))
+        ctk.CTkLabel(sb, text="BIBLIOTECA",
+                     font=ctk.CTkFont("Segoe UI", 9),
+                     text_color=C["text_sec"]
+                     ).grid(row=1, column=0, sticky="w", padx=20, pady=(0, 12))
 
         nav = [
-            ("⬡", "Conectar",       "conexion"),
-            ("▦", "Biblioteca",     "biblioteca"),
-            ("◎", "Buscar Artista", "busqueda"),
-            ("◈", "Estadísticas",   "stats"),
+            ("🔗", "Conectar",       "conexion"),
+            ("📚", "Biblioteca",     "biblioteca"),
+            ("🔎", "Playlist por artista", "busqueda"),
+            ("📊", "Estadísticas",   "stats"),
         ]
         self._nframes = {}
         for i, (ico, txt, vista) in enumerate(nav):
             f = self._nav_item(sb, ico, txt, vista)
-            f.grid(row=3+i, column=0, sticky="ew", padx=10, pady=2)
+            f.grid(row=3+i, column=0, sticky="ew", padx=12, pady=1)
             self._nframes[vista] = f
 
-        ctk.CTkFrame(sb, height=1, fg_color=C["gris2"]
-                     ).grid(row=8, column=0, sticky="ew", padx=18, pady=10)
+        ctk.CTkFrame(sb, height=1, fg_color=C["separator"]
+                     ).grid(row=8, column=0, sticky="ew", padx=16, pady=12)
+
+        pr = ctk.CTkFrame(sb, fg_color="transparent")
+        pr.grid(row=9, column=0, sticky="ew", padx=18, pady=(0, 6))
+        ctk.CTkLabel(pr, text="Modo prueba",
+                     font=ctk.CTkFont("Segoe UI", 10),
+                     text_color=C["text"], anchor="w").pack(anchor="w")
+        ctk.CTkLabel(pr, text="Menos llamadas a la API de Spotify.",
+                     font=ctk.CTkFont("Segoe UI", 9),
+                     text_color=C["text_sec"], anchor="w").pack(anchor="w", pady=(2, 6))
+        self.sw_prueba = ctk.CTkSwitch(
+            pr, text="", width=42,
+            fg_color=C["separator"], progress_color=C["accent"],
+            button_color=C["text"], button_hover_color=C["text"],
+            command=self._on_toggle_prueba,
+        )
+        self.sw_prueba.pack(anchor="w")
 
         self.lbl_user = ctk.CTkLabel(sb, text="Sin conectar",
-                                      font=ctk.CTkFont("Helvetica", 10),
-                                      text_color=C["gris"])
-        self.lbl_user.grid(row=9, column=0, sticky="w", padx=22, pady=(4, 28))
+                                      font=ctk.CTkFont("Segoe UI", 10),
+                                      text_color=C["text_sec"])
+        self.lbl_user.grid(row=10, column=0, sticky="w", padx=20, pady=(4, 22))
+
+    def _on_toggle_prueba(self):
+        activo = self.sw_prueba.get() == 1
+        self._persist_modo_prueba(activo)
 
     def _nav_item(self, parent, ico, txt, vista):
-        f = ctk.CTkFrame(parent, fg_color="transparent", corner_radius=8, cursor="hand2")
+        f = ctk.CTkFrame(parent, fg_color="transparent", corner_radius=6, cursor="hand2")
         f.grid_columnconfigure(1, weight=1)
 
-        def _in(e):  f.configure(fg_color=C["card"])
-        def _out(e): f.configure(fg_color="transparent")
-        def _clk(e=None): self._ir(vista)
+        def _in(_):
+            if self._vista_actual != vista:
+                f.configure(fg_color=C["nav_hover"])
 
-        f.bind("<Enter>", _in); f.bind("<Leave>", _out); f.bind("<Button-1>", _clk)
+        def _out(_):
+            if self._vista_actual == vista:
+                f.configure(fg_color=C["nav_sel"])
+            else:
+                f.configure(fg_color="transparent")
 
-        ctk.CTkLabel(f, text=ico, font=ctk.CTkFont("Georgia", 14),
-                     text_color=C["oro"], width=26
-                     ).grid(row=0, column=0, padx=(12, 0), pady=10)
-        lbl = ctk.CTkLabel(f, text=txt, font=ctk.CTkFont("Helvetica", 12),
-                            text_color=C["blanco"], anchor="w")
-        lbl.grid(row=0, column=1, padx=(8, 12), sticky="w")
-        lbl.bind("<Button-1>", _clk)
+        def _clk(_=None):
+            self._ir(vista)
+
+        for w in (f,):
+            w.bind("<Enter>", _in)
+            w.bind("<Leave>", _out)
+            w.bind("<Button-1>", _clk)
+
+        ico_l = ctk.CTkLabel(
+            f, text=ico, font=ctk.CTkFont("Segoe UI", 14),
+            text_color=C["text_sec"], width=28,
+        )
+        ico_l.grid(row=0, column=0, padx=(8, 0), pady=6)
+        lbl = ctk.CTkLabel(
+            f, text=txt, font=ctk.CTkFont("Segoe UI", 11),
+            text_color=C["text"], anchor="w",
+        )
+        lbl.grid(row=0, column=1, padx=(6, 10), sticky="w")
+        for w in (ico_l, lbl):
+            w.bind("<Enter>", _in)
+            w.bind("<Leave>", _out)
+            w.bind("<Button-1>", _clk)
+
+        self._nav_refs[vista] = {"frame": f, "ico": ico_l, "txt": lbl}
         return f
 
     def _ir(self, nombre: str):
+        self._vista_actual = nombre
         for v in self._vistas.values():
             v.grid_forget()
         self._vistas[nombre].grid(row=0, column=1, sticky="nsew")
-        for k, f in self._nframes.items():
-            activo = k == nombre
-            f.configure(
-                fg_color=C["card"] if activo else "transparent",
-                border_width=1 if activo else 0,
-                border_color=C["oro_oscuro"] if activo else C["card"]
-            )
+        for k, ref in self._nav_refs.items():
+            sel = k == nombre
+            fr, ic, tx = ref["frame"], ref["ico"], ref["txt"]
+            if sel:
+                fr.configure(fg_color=C["nav_sel"])
+                ic.configure(text_color=C["accent"])
+                tx.configure(
+                    text_color=C["accent"],
+                    font=ctk.CTkFont("Segoe UI", 11, weight="bold"),
+                )
+            else:
+                fr.configure(fg_color="transparent")
+                ic.configure(text_color=C["text_sec"])
+                tx.configure(
+                    text_color=C["text"],
+                    font=ctk.CTkFont("Segoe UI", 11),
+                )
 
     # ── VISTAS ───────────────────────────────
 
@@ -342,47 +495,39 @@ class VentanaPrincipal(ctk.CTk):
         v.grid_columnconfigure(0, weight=1)
 
         box = ctk.CTkFrame(v, fg_color="transparent")
-        box.place(relx=0.5, rely=0.46, anchor="center")
+        box.place(relx=0.5, rely=0.5, anchor="center")
 
-        self.ico_conn = ctk.CTkLabel(box, text="◈",
-                                      font=ctk.CTkFont("Georgia", 90),
-                                      text_color=C["oro"])
+        self.ico_conn = ctk.CTkLabel(box, text="♪",
+                                      font=ctk.CTkFont("Segoe UI", 72),
+                                      text_color=C["accent"])
         self.ico_conn.pack()
 
-        ctk.CTkLabel(box, text="SYNCNODE",
-                     font=ctk.CTkFont("Georgia", 38, weight="bold"),
-                     text_color=C["blanco"]).pack(pady=(2, 0))
+        ctk.CTkLabel(box, text="SyncNode",
+                     font=ctk.CTkFont("Segoe UI", 32, weight="bold"),
+                     text_color=C["text"]).pack(pady=(4, 0))
 
-        ctk.CTkLabel(box, text="Tu música. Organizada con elegancia.",
-                     font=ctk.CTkFont("Helvetica", 13),
-                     text_color=C["gris"]).pack(pady=(6, 36))
+        ctk.CTkLabel(box, text="Inicia sesión con Spotify para organizar tu biblioteca.",
+                     font=ctk.CTkFont("Segoe UI", 13),
+                     text_color=C["text_sec"]).pack(pady=(6, 32))
 
-        # Líneas decorativas
-        deco = ctk.CTkFrame(box, fg_color="transparent")
-        deco.pack(pady=(0, 30))
-        ctk.CTkFrame(deco, width=70, height=1, fg_color=C["oro_oscuro"]).pack(side="left")
-        ctk.CTkLabel(deco, text="  ◆  ", font=ctk.CTkFont("Georgia", 9),
-                     text_color=C["oro_oscuro"]).pack(side="left")
-        ctk.CTkFrame(deco, width=70, height=1, fg_color=C["oro_oscuro"]).pack(side="left")
-
-        self.btn_conn = GoldBtn(
+        self.btn_conn = PrimaryBtn(
             box, text="  Conectar con Spotify  ",
-            width=270, height=50,
-            font=ctk.CTkFont("Helvetica", 14, weight="bold"),
+            width=280, height=50,
+            font=ctk.CTkFont("Segoe UI", 14, weight="bold"),
             command=self._conectar
         )
         self.btn_conn.pack()
 
         self.lbl_conn = ctk.CTkLabel(box, text="",
-                                      font=ctk.CTkFont("Helvetica", 11),
-                                      text_color=C["gris"])
-        self.lbl_conn.pack(pady=12)
+                                      font=ctk.CTkFont("Segoe UI", 11),
+                                      text_color=C["text_sec"])
+        self.lbl_conn.pack(pady=14)
 
         self._pulsar()
         return v
 
     def _pulsar(self):
-        seq = [C["oro"], C["oro_claro"], C["oro"], C["oro_oscuro"]]
+        seq = [C["accent"], C["accent_hover"], C["accent"], C["accent_muted"]]
         i   = [0]
         def tick():
             try:
@@ -396,7 +541,7 @@ class VentanaPrincipal(ctk.CTk):
     def _conectar(self):
         if not self.controlador: return
         self.btn_conn.configure(state="disabled", text="Conectando...")
-        self.lbl_conn.configure(text="Abriendo navegador...", text_color=C["gris"])
+        self.lbl_conn.configure(text="Abriendo navegador...", text_color=C["text_sec"])
         threading.Thread(target=self._t_conn, daemon=True).start()
 
     def _t_conn(self):
@@ -408,15 +553,15 @@ class VentanaPrincipal(ctk.CTk):
             self.after(0, lambda err=e: self._conn_err(str(err)))
 
     def _conn_ok(self, nombre):
-        self.lbl_user.configure(text=f"◆  {nombre}", text_color=C["oro"])
+        self.lbl_user.configure(text=f"👤  {nombre}", text_color=C["accent"])
         self.btn_conn.configure(
             state="normal", text="✓  Conectado",
-            fg_color="transparent", hover_color=C["card_h"],
-            text_color=C["oro"], border_width=1, border_color=C["oro_oscuro"]
+            fg_color="transparent", hover_color=C["nav_hover"],
+            text_color=C["accent"], border_width=1, border_color=C["separator"]
         )
         self.lbl_conn.configure(
             text=f"Bienvenido, {nombre}. Sincroniza tu biblioteca.",
-            text_color=C["oro"]
+            text_color=C["accent"]
         )
 
     def _conn_err(self, msg):
@@ -430,74 +575,72 @@ class VentanaPrincipal(ctk.CTk):
         v.grid_rowconfigure(3, weight=1)
         v.grid_columnconfigure((0, 1), weight=1)
 
-        # Header
         hdr = ctk.CTkFrame(v, fg_color="transparent")
-        hdr.grid(row=0, column=0, columnspan=2, sticky="ew", padx=32, pady=(28, 0))
+        hdr.grid(row=0, column=0, columnspan=2, sticky="ew", padx=40, pady=(36, 0))
         ctk.CTkLabel(hdr, text="Biblioteca",
-                     font=ctk.CTkFont("Georgia", 26, weight="bold"),
-                     text_color=C["blanco"]).pack(side="left")
+                     font=ctk.CTkFont("Segoe UI", 32, weight="bold"),
+                     text_color=C["text"]).pack(side="left")
 
-        self.btn_sync = GoldBtn(hdr, text="⟳  Sincronizar",
-                                 width=140, command=self._sync)
+        self.btn_sync = PrimaryBtn(hdr, text="Sincronizar",
+                                 width=148, command=self._sync)
         self.btn_sync.pack(side="right")
-        GhostBtn(hdr, text="Desel.", width=82,
-                 command=lambda: self._toggle(False)).pack(side="right", padx=(0, 6))
-        GhostBtn(hdr, text="Sel. Todo", width=94,
-                 command=lambda: self._toggle(True)).pack(side="right", padx=(0, 6))
+        SecondaryBtn(hdr, text="Ninguno", width=88,
+                 command=lambda: self._toggle(False)).pack(side="right", padx=(0, 8))
+        SecondaryBtn(hdr, text="Todo", width=88,
+                 command=lambda: self._toggle(True)).pack(side="right", padx=(0, 8))
 
         # Progreso
-        self.bar_sync = ctk.CTkProgressBar(v, fg_color=C["gris2"],
-                                            progress_color=C["oro"],
+        self.bar_sync = ctk.CTkProgressBar(v, fg_color=C["separator"],
+                                            progress_color=C["accent"],
                                             corner_radius=2, height=3)
         self.lbl_sync = ctk.CTkLabel(v, text="",
-                                      font=ctk.CTkFont("Helvetica", 10),
-                                      text_color=C["gris"])
+                                      font=ctk.CTkFont("Segoe UI", 10),
+                                      text_color=C["text_sec"])
 
-        ctk.CTkFrame(v, height=1, fg_color=C["gris2"]
+        ctk.CTkFrame(v, height=1, fg_color=C["separator"]
                      ).grid(row=2, column=0, columnspan=2,
-                            sticky="ew", padx=32, pady=(12, 4))
+                            sticky="ew", padx=40, pady=(20, 4))
 
         for col, txt in enumerate(["GÉNEROS", "ARTISTAS"]):
-            ctk.CTkLabel(v, text=txt, font=ctk.CTkFont("Helvetica", 8),
-                         text_color=C["gris"]
+            ctk.CTkLabel(v, text=txt, font=ctk.CTkFont("Segoe UI", 11),
+                         text_color=C["text_sec"]
                          ).grid(row=2, column=col, sticky="w",
-                                padx=(32 if col == 0 else 14, 0), pady=(16, 2))
+                                padx=(40 if col == 0 else 16, 0), pady=(18, 6))
 
         self.scr_gen = ctk.CTkScrollableFrame(
-            v, fg_color=C["card"], corner_radius=10,
-            scrollbar_button_color=C["gris2"],
-            scrollbar_button_hover_color=C["oro_oscuro"])
-        self.scr_gen.grid(row=3, column=0, sticky="nsew", padx=(32, 8), pady=4)
+            v, fg_color=C["bg2"], corner_radius=14, border_width=0,
+            scrollbar_button_color=C["separator"],
+            scrollbar_button_hover_color=C["accent_muted"])
+        self.scr_gen.grid(row=3, column=0, sticky="nsew", padx=(40, 10), pady=4)
 
         self.scr_art = ctk.CTkScrollableFrame(
-            v, fg_color=C["card"], corner_radius=10,
-            scrollbar_button_color=C["gris2"],
-            scrollbar_button_hover_color=C["oro_oscuro"])
-        self.scr_art.grid(row=3, column=1, sticky="nsew", padx=(8, 32), pady=4)
+            v, fg_color=C["bg2"], corner_radius=14, border_width=0,
+            scrollbar_button_color=C["separator"],
+            scrollbar_button_hover_color=C["accent_muted"])
+        self.scr_art.grid(row=3, column=1, sticky="nsew", padx=(10, 40), pady=4)
 
-        # Footer
         foot = ctk.CTkFrame(v, fg_color="transparent")
-        foot.grid(row=4, column=0, columnspan=2, sticky="ew", padx=32, pady=16)
+        foot.grid(row=4, column=0, columnspan=2, sticky="ew", padx=40, pady=20)
 
-        self.btn_crear = GoldBtn(foot, text="Crear Playlists Seleccionadas",
-                                  width=270, height=44, command=self._crear)
+        self.btn_crear = PrimaryBtn(foot, text="Crear playlists seleccionadas",
+                                  width=280, height=48, command=self._crear)
         self.btn_crear.pack(side="right")
 
-        self.bar_crear = ctk.CTkProgressBar(foot, fg_color=C["gris2"],
-                                             progress_color=C["oro"],
+        self.bar_crear = ctk.CTkProgressBar(foot, fg_color=C["separator"],
+                                             progress_color=C["accent"],
                                              corner_radius=2, height=3, width=260)
         self.lbl_crear = ctk.CTkLabel(foot, text="",
-                                       font=ctk.CTkFont("Helvetica", 10),
-                                       text_color=C["gris"])
+                                       font=ctk.CTkFont("Segoe UI", 10),
+                                       text_color=C["text_sec"])
         return v
 
     def _sync(self):
         if not self.controlador:
             messagebox.showwarning("Aviso", "Primero conecta con Spotify.")
             return
-        self.btn_sync.configure(state="disabled", text="⟳  Sincronizando...")
+        self.btn_sync.configure(state="disabled", text="Sincronizando…")
         self.bar_sync.grid(row=1, column=0, columnspan=2,
-                           sticky="ew", padx=32, pady=(8, 0))
+                           sticky="ew", padx=40, pady=(8, 0))
         self.bar_sync.set(0)
         self.lbl_sync.grid(row=1, column=0, columnspan=2)
         threading.Thread(target=self._t_sync, daemon=True).start()
@@ -515,7 +658,7 @@ class VentanaPrincipal(ctk.CTk):
         except Exception as e:
             self.after(0, lambda err=e: (
                 messagebox.showerror("Error", str(err)),
-                self.btn_sync.configure(state="normal", text="⟳  Sincronizar")
+                self.btn_sync.configure(state="normal", text="Sincronizar")
             ))
 
     def _sync_ok(self):
@@ -526,7 +669,7 @@ class VentanaPrincipal(ctk.CTk):
         self._actualizar_stats(self.controlador.calcular_estadisticas())
         self.bar_sync.grid_forget()
         self.lbl_sync.grid_forget()
-        self.btn_sync.configure(state="normal", text="⟳  Sincronizar")
+        self.btn_sync.configure(state="normal", text="Sincronizar")
         total = sum(len(v) for v in g.values())
         messagebox.showinfo("Sincronización completa",
                             f"{total:,} canciones en {len(g)} géneros.")
@@ -566,7 +709,7 @@ class VentanaPrincipal(ctk.CTk):
 
     def _reset_crear(self):
         self.btn_crear.configure(state="normal",
-                                  text="Crear Playlists Seleccionadas")
+                                  text="Crear playlists seleccionadas")
         self.bar_crear.pack_forget()
         self.lbl_crear.pack_forget()
 
@@ -584,27 +727,27 @@ class VentanaPrincipal(ctk.CTk):
             row   = ctk.CTkFrame(self.scr_gen, fg_color="transparent")
             row.pack(fill="x", padx=10, pady=3)
             cb = ctk.CTkCheckBox(row, text=g,
-                                  font=ctk.CTkFont("Helvetica", 11),
-                                  text_color=C["blanco"],
+                                  font=ctk.CTkFont("Segoe UI", 11),
+                                  text_color=C["text"],
                                   fg_color=color, hover_color=color,
                                   checkmark_color=C["bg"],
-                                  border_color=C["gris2"], corner_radius=3)
+                                  border_color=C["separator"], corner_radius=3)
             cb.pack(side="left")
             cnt = len(self.controlador.grupos.get(g, []))
             ctk.CTkLabel(row, text=f"{cnt:,}",
-                         font=ctk.CTkFont("Helvetica", 10),
+                         font=ctk.CTkFont("Segoe UI", 10),
                          text_color=color).pack(side="right", padx=10)
             self.cbs_gen.append(cb)
 
         self.cbs_art = []
         for a in artistas[:300]:
             cb = ctk.CTkCheckBox(self.scr_art, text=a,
-                                  font=ctk.CTkFont("Helvetica", 11),
-                                  text_color=C["blanco"],
-                                  fg_color=C["oro_oscuro"],
-                                  hover_color=C["oro"],
+                                  font=ctk.CTkFont("Segoe UI", 11),
+                                  text_color=C["text"],
+                                  fg_color=C["accent_muted"],
+                                  hover_color=C["accent"],
                                   checkmark_color=C["bg"],
-                                  border_color=C["gris2"], corner_radius=3)
+                                  border_color=C["separator"], corner_radius=3)
             cb.pack(anchor="w", padx=10, pady=3)
             self.cbs_art.append(cb)
 
@@ -616,48 +759,47 @@ class VentanaPrincipal(ctk.CTk):
         v.grid_rowconfigure(3, weight=1)
 
         hdr = ctk.CTkFrame(v, fg_color="transparent")
-        hdr.grid(row=0, column=0, sticky="ew", padx=32, pady=(28, 4))
-        ctk.CTkLabel(hdr, text="Buscar Artista",
-                     font=ctk.CTkFont("Georgia", 26, weight="bold"),
-                     text_color=C["blanco"]).pack(side="left")
+        hdr.grid(row=0, column=0, sticky="ew", padx=40, pady=(36, 4))
+        ctk.CTkLabel(hdr, text="Playlist por artista",
+                     font=ctk.CTkFont("Segoe UI", 32, weight="bold"),
+                     text_color=C["text"]).pack(side="left")
 
         ctk.CTkLabel(v,
-                     text="Crea una playlist con la discografía completa de cualquier artista",
-                     font=ctk.CTkFont("Helvetica", 12),
-                     text_color=C["gris"]
-                     ).grid(row=1, column=0, sticky="w", padx=32, pady=(0, 16))
+                     text="Busca en Spotify o en tu biblioteca y crea una playlist al instante.",
+                     font=ctk.CTkFont("Segoe UI", 13),
+                     text_color=C["text_sec"]
+                     ).grid(row=1, column=0, sticky="w", padx=40, pady=(0, 20))
 
-        # Panel
-        pnl = ctk.CTkFrame(v, fg_color=C["card"], corner_radius=12)
-        pnl.grid(row=2, column=0, sticky="ew", padx=32, pady=(0, 16))
+        pnl = ctk.CTkFrame(v, fg_color=C["bg2"], corner_radius=16, border_width=0)
+        pnl.grid(row=2, column=0, sticky="ew", padx=40, pady=(0, 16))
         pnl.grid_columnconfigure(1, weight=1)
 
         # Modo
         self.modo = ctk.StringVar(value="spotify")
         mr = ctk.CTkFrame(pnl, fg_color="transparent")
         mr.grid(row=0, column=0, columnspan=3, sticky="w", padx=20, pady=(18, 8))
-        ctk.CTkLabel(mr, text="BUSCAR EN", font=ctk.CTkFont("Helvetica", 8),
-                     text_color=C["gris"]).pack(side="left", padx=(0, 14))
-        for txt, val, col in [("Todo Spotify","spotify",C["oro"]),
-                                ("Mi Biblioteca","biblioteca",C["acento"])]:
+        ctk.CTkLabel(mr, text="BUSCAR EN", font=ctk.CTkFont("Segoe UI", 8),
+                     text_color=C["text_sec"]).pack(side="left", padx=(0, 14))
+        for txt, val, col in [("Todo Spotify","spotify",C["accent"]),
+                                ("Mi Biblioteca","biblioteca",C["accent2"])]:
             rb = ctk.CTkRadioButton(mr, text=txt, variable=self.modo, value=val,
-                                     font=ctk.CTkFont("Helvetica", 12),
-                                     text_color=C["blanco"],
+                                     font=ctk.CTkFont("Segoe UI", 12),
+                                     text_color=C["text"],
                                      fg_color=col, hover_color=col)
             rb.pack(side="left", padx=10)
             rb.configure(command=self._modo_chg)
 
-        self.entry = ctk.CTkEntry(pnl, placeholder_text="Nombre del artista...",
-                                   font=ctk.CTkFont("Helvetica", 13),
-                                   fg_color=C["bg2"], border_color=C["gris2"],
-                                   text_color=C["blanco"],
-                                   placeholder_text_color=C["gris"],
-                                   corner_radius=6, height=42)
+        self.entry = ctk.CTkEntry(pnl, placeholder_text="Buscar por artista",
+                                   font=ctk.CTkFont("Segoe UI", 14),
+                                   fg_color=C["bg"], border_color=C["separator"],
+                                   text_color=C["text"],
+                                   placeholder_text_color=C["text_sec"],
+                                   corner_radius=22, height=46)
         self.entry.grid(row=1, column=0, columnspan=2,
                         sticky="ew", padx=20, pady=(0, 8))
         self.entry.bind("<Return>", lambda e: self._buscar())
 
-        self.btn_bus = GoldBtn(pnl, text="Buscar", width=110, height=42,
+        self.btn_bus = PrimaryBtn(pnl, text="Buscar", width=120, height=46,
                                 command=self._buscar)
         self.btn_bus.grid(row=1, column=2, padx=(0, 20), pady=(0, 8))
 
@@ -665,18 +807,18 @@ class VentanaPrincipal(ctk.CTk):
         self.row_cant.grid(row=2, column=0, columnspan=3,
                            sticky="ew", padx=20, pady=(0, 18))
         ctk.CTkLabel(self.row_cant, text="CANTIDAD DE CANCIONES",
-                     font=ctk.CTkFont("Helvetica", 8),
-                     text_color=C["gris"]).pack(side="left")
+                     font=ctk.CTkFont("Segoe UI", 8),
+                     text_color=C["text_sec"]).pack(side="left")
         self.lbl_cant = ctk.CTkLabel(self.row_cant, text="50",
-                                      font=ctk.CTkFont("Georgia", 13, weight="bold"),
-                                      text_color=C["oro"])
+                                      font=ctk.CTkFont("Segoe UI", 13, weight="bold"),
+                                      text_color=C["accent"])
         self.lbl_cant.pack(side="right", padx=(0, 4))
         self.slider = ctk.CTkSlider(self.row_cant,
                                      from_=10, to=200, number_of_steps=19,
-                                     fg_color=C["gris2"],
-                                     progress_color=C["oro_oscuro"],
-                                     button_color=C["oro"],
-                                     button_hover_color=C["oro_claro"],
+                                     fg_color=C["separator"],
+                                     progress_color=C["accent_muted"],
+                                     button_color=C["accent"],
+                                     button_hover_color=C["accent_hover"],
                                      width=170,
                                      command=lambda v: self.lbl_cant.configure(
                                          text=str(int(v))))
@@ -684,17 +826,17 @@ class VentanaPrincipal(ctk.CTk):
         self.slider.pack(side="right", padx=10)
 
         self.scr_res = ctk.CTkScrollableFrame(
-            v, fg_color=C["card"], corner_radius=12,
-            scrollbar_button_color=C["gris2"],
-            scrollbar_button_hover_color=C["oro_oscuro"])
-        self.scr_res.grid(row=3, column=0, sticky="nsew", padx=32, pady=(0, 16))
+            v, fg_color=C["bg2"], corner_radius=14, border_width=0,
+            scrollbar_button_color=C["separator"],
+            scrollbar_button_hover_color=C["accent_muted"])
+        self.scr_res.grid(row=3, column=0, sticky="nsew", padx=40, pady=(0, 16))
 
-        self.bar_bus = ctk.CTkProgressBar(v, fg_color=C["gris2"],
-                                           progress_color=C["oro"],
+        self.bar_bus = ctk.CTkProgressBar(v, fg_color=C["separator"],
+                                           progress_color=C["accent"],
                                            corner_radius=2, height=3)
         self.lbl_bus_txt = ctk.CTkLabel(v, text="",
-                                         font=ctk.CTkFont("Helvetica", 10),
-                                         text_color=C["gris"])
+                                         font=ctk.CTkFont("Segoe UI", 10),
+                                         text_color=C["text_sec"])
         return v
 
     def _modo_chg(self):
@@ -715,8 +857,8 @@ class VentanaPrincipal(ctk.CTk):
             else:
                 ctk.CTkLabel(self.scr_res,
                              text=f"No se encontró «{nombre}» en tu biblioteca.",
-                             font=ctk.CTkFont("Helvetica", 13),
-                             text_color=C["gris"]).pack(pady=40)
+                             font=ctk.CTkFont("Segoe UI", 13),
+                             text_color=C["text_sec"]).pack(pady=40)
         else:
             self.btn_bus.configure(state="disabled", text="...")
             threading.Thread(target=self._t_buscar,
@@ -736,8 +878,8 @@ class VentanaPrincipal(ctk.CTk):
         self.btn_bus.configure(state="normal", text="Buscar")
         if not artistas:
             ctk.CTkLabel(self.scr_res, text="No se encontraron artistas.",
-                         font=ctk.CTkFont("Helvetica", 13),
-                         text_color=C["gris"]).pack(pady=40)
+                         font=ctk.CTkFont("Segoe UI", 13),
+                         text_color=C["text_sec"]).pack(pady=40)
             return
 
         for art in artistas:
@@ -747,25 +889,25 @@ class VentanaPrincipal(ctk.CTk):
             g_str   = generos[0] if generos else "Género desconocido"
 
             card = ctk.CTkFrame(self.scr_res, fg_color=C["card_h"],
-                                corner_radius=10,
-                                border_width=1, border_color=C["gris2"])
+                                corner_radius=12,
+                                border_width=0)
             card.pack(fill="x", padx=10, pady=5)
             card.grid_columnconfigure(1, weight=1)
 
-            ctk.CTkLabel(card, text="◎",
-                         font=ctk.CTkFont("Georgia", 26), text_color=C["oro"]
+            ctk.CTkLabel(card, text="🎵",
+                         font=ctk.CTkFont("Segoe UI", 22), text_color=C["accent"]
                          ).grid(row=0, column=0, rowspan=2, padx=20, pady=14)
             ctk.CTkLabel(card, text=nombre,
-                         font=ctk.CTkFont("Georgia", 14, weight="bold"),
-                         text_color=C["blanco"], anchor="w"
+                         font=ctk.CTkFont("Segoe UI", 14, weight="bold"),
+                         text_color=C["text"], anchor="w"
                          ).grid(row=0, column=1, sticky="w", pady=(14, 2))
             ctk.CTkLabel(card,
                          text=f"{g_str}  ·  {sigs:,} seguidores",
-                         font=ctk.CTkFont("Helvetica", 10),
-                         text_color=C["gris"], anchor="w"
+                         font=ctk.CTkFont("Segoe UI", 10),
+                         text_color=C["text_sec"], anchor="w"
                          ).grid(row=1, column=1, sticky="w", pady=(0, 14))
 
-            GoldBtn(card, text="Crear Playlist", width=138, height=36,
+            PrimaryBtn(card, text="Crear playlist", width=148, height=40,
                     command=lambda a=art: self._crear_sp(a)
                     ).grid(row=0, column=2, rowspan=2, padx=18)
 
@@ -779,9 +921,9 @@ class VentanaPrincipal(ctk.CTk):
                 if isinstance(btn, ctk.CTkButton):
                     btn.configure(state="disabled")
 
-        self.bar_bus.grid(row=4, column=0, sticky="ew", padx=32, pady=(0, 2))
+        self.bar_bus.grid(row=4, column=0, sticky="ew", padx=40, pady=(0, 2))
         self.bar_bus.set(0)
-        self.lbl_bus_txt.grid(row=5, column=0, padx=32, pady=(0, 8))
+        self.lbl_bus_txt.grid(row=5, column=0, padx=40, pady=(0, 8))
         self.lbl_bus_txt.configure(text=f"Explorando discografía de {nombre}...")
 
         threading.Thread(target=self._t_crear_sp,
@@ -812,17 +954,17 @@ class VentanaPrincipal(ctk.CTk):
 
     def _res_bib(self, nombre, uris):
         card = ctk.CTkFrame(self.scr_res, fg_color=C["card_h"],
-                            corner_radius=10,
-                            border_width=1, border_color=C["oro_oscuro"])
+                            corner_radius=12,
+                            border_width=0)
         card.pack(fill="x", padx=10, pady=8)
-        ctk.CTkLabel(card, text=f"◎  {nombre}",
-                     font=ctk.CTkFont("Georgia", 15, weight="bold"),
-                     text_color=C["blanco"]).pack(anchor="w", padx=20, pady=(18, 4))
+        ctk.CTkLabel(card, text=f"🎵  {nombre}",
+                     font=ctk.CTkFont("Segoe UI", 15, weight="bold"),
+                     text_color=C["text"]).pack(anchor="w", padx=20, pady=(18, 4))
         ctk.CTkLabel(card,
                      text=f"{len(uris)} canciones encontradas en tu biblioteca",
-                     font=ctk.CTkFont("Helvetica", 11),
-                     text_color=C["gris"]).pack(anchor="w", padx=20)
-        GoldBtn(card, text="Crear Playlist", width=156, height=38,
+                     font=ctk.CTkFont("Segoe UI", 11),
+                     text_color=C["text_sec"]).pack(anchor="w", padx=20)
+        PrimaryBtn(card, text="Crear playlist", width=168, height=40,
                 command=lambda: threading.Thread(
                     target=self._t_bib, args=(nombre, uris), daemon=True
                 ).start()).pack(anchor="w", padx=20, pady=16)
@@ -857,37 +999,37 @@ class VentanaPrincipal(ctk.CTk):
         v.grid_rowconfigure(2, weight=1)
 
         ctk.CTkLabel(v, text="Estadísticas",
-                     font=ctk.CTkFont("Georgia", 26, weight="bold"),
-                     text_color=C["blanco"]
+                     font=ctk.CTkFont("Segoe UI", 32, weight="bold"),
+                     text_color=C["text"]
                      ).grid(row=0, column=0, columnspan=3,
-                            sticky="w", padx=32, pady=(28, 16))
+                            sticky="w", padx=40, pady=(36, 20))
 
-        self.sc_tot = StatCard(v, "CANCIONES",  "—", C["oro"])
-        self.sc_gen = StatCard(v, "GÉNEROS",    "—", C["acento"])
-        self.sc_art = StatCard(v, "ARTISTAS",   "—", C["oro_claro"])
-        self.sc_tot.grid(row=1, column=0, padx=(32, 8),  pady=(0, 16), sticky="ew")
+        self.sc_tot = StatCard(v, "CANCIONES",  "—", C["accent"])
+        self.sc_gen = StatCard(v, "GÉNEROS",    "—", C["accent2"])
+        self.sc_art = StatCard(v, "ARTISTAS",   "—", C["accent_hover"])
+        self.sc_tot.grid(row=1, column=0, padx=(40, 8),  pady=(0, 16), sticky="ew")
         self.sc_gen.grid(row=1, column=1, padx=8,         pady=(0, 16), sticky="ew")
-        self.sc_art.grid(row=1, column=2, padx=(8, 32),   pady=(0, 16), sticky="ew")
+        self.sc_art.grid(row=1, column=2, padx=(8, 40),   pady=(0, 16), sticky="ew")
 
         self.pnl_gen = ctk.CTkScrollableFrame(
-            v, fg_color=C["card"], corner_radius=12,
-            label_text="DISTRIBUCIÓN DE GÉNEROS",
-            label_font=ctk.CTkFont("Helvetica", 8),
-            label_text_color=C["gris"],
-            scrollbar_button_color=C["gris2"],
-            scrollbar_button_hover_color=C["oro_oscuro"])
+            v, fg_color=C["bg2"], corner_radius=14, border_width=0,
+            label_text="Distribución por género",
+            label_font=ctk.CTkFont("Segoe UI", 11),
+            label_text_color=C["text_sec"],
+            scrollbar_button_color=C["separator"],
+            scrollbar_button_hover_color=C["accent_muted"])
         self.pnl_gen.grid(row=2, column=0, columnspan=2,
-                          padx=(32, 8), pady=(0, 24), sticky="nsew")
+                          padx=(40, 8), pady=(0, 28), sticky="nsew")
 
         self.pnl_top = ctk.CTkScrollableFrame(
-            v, fg_color=C["card"], corner_radius=12,
-            label_text="TOP ARTISTAS",
-            label_font=ctk.CTkFont("Helvetica", 8),
-            label_text_color=C["gris"],
-            scrollbar_button_color=C["gris2"],
-            scrollbar_button_hover_color=C["oro_oscuro"])
+            v, fg_color=C["bg2"], corner_radius=14, border_width=0,
+            label_text="Artistas más frecuentes",
+            label_font=ctk.CTkFont("Segoe UI", 11),
+            label_text_color=C["text_sec"],
+            scrollbar_button_color=C["separator"],
+            scrollbar_button_hover_color=C["accent_muted"])
         self.pnl_top.grid(row=2, column=2,
-                          padx=(8, 32), pady=(0, 24), sticky="nsew")
+                          padx=(8, 40), pady=(0, 28), sticky="nsew")
         return v
 
     def _actualizar_stats(self, stats):
@@ -912,20 +1054,20 @@ class VentanaPrincipal(ctk.CTk):
             row.grid_columnconfigure(1, weight=1)
 
             med   = medallas[i] if i < 3 else str(i+1)
-            color = C["oro"] if i == 0 else (C["oro_oscuro"] if i < 3 else C["gris"])
+            color = C["accent"] if i == 0 else (C["accent_muted"] if i < 3 else C["text_sec"])
 
             ctk.CTkLabel(row, text=med,
-                         font=ctk.CTkFont("Georgia", 13, weight="bold"),
+                         font=ctk.CTkFont("Segoe UI", 13, weight="bold"),
                          text_color=color, width=30
                          ).grid(row=0, column=0, padx=(12, 0), pady=10)
             ctk.CTkLabel(row,
                          text=(artista[:23]+"…") if len(artista)>23 else artista,
-                         font=ctk.CTkFont("Helvetica", 12),
-                         text_color=C["blanco"], anchor="w"
+                         font=ctk.CTkFont("Segoe UI", 12),
+                         text_color=C["text"], anchor="w"
                          ).grid(row=0, column=1, sticky="w", padx=8)
             ctk.CTkLabel(row, text=str(cnt),
-                         font=ctk.CTkFont("Georgia", 13, weight="bold"),
-                         text_color=C["gris"]
+                         font=ctk.CTkFont("Segoe UI", 13, weight="bold"),
+                         text_color=C["text_sec"]
                          ).grid(row=0, column=2, padx=12)
 
 
@@ -940,10 +1082,10 @@ def lanzar_con_splash(app: VentanaPrincipal):
     splash = SplashScreen(app)
     pasos  = [
         (0.20, "Cargando configuración..."),
-        (0.45, "Preparando servicios..."),
-        (0.70, "Construyendo interfaz..."),
+        (0.45, "Preparando Spotify..."),
+        (0.70, "Montando la interfaz..."),
         (0.92, "Casi listo..."),
-        (1.00, "¡Bienvenido a SyncNode 2.0!"),
+        (1.00, "¡Listo!"),
     ]
 
     def paso(i=0):

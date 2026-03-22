@@ -1,12 +1,19 @@
 import os
 import json
 import time
+import threading
 import requests
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Callable, List, Dict, Optional, Tuple
+
+# Límites en modo prueba (menos llamadas a la API de Spotify)
+MP_BIBLIO_MAX = 120
+MP_ARTIST_ALBUMS_MAX = 24
+MP_ARTIST_TRACKS_MAX = 40
+MP_BUSQUEDA_ARTISTAS = 3
 
 
 PERMISOS = (
@@ -21,13 +28,21 @@ PERMISOS = (
 
 
 class SpotifyService:
-    def __init__(self, client_id: str, client_secret: str, redirect_uri: str):
+    def __init__(
+        self,
+        client_id: str,
+        client_secret: str,
+        redirect_uri: str,
+        modo_prueba: bool = False,
+    ):
         self.client_id     = client_id
         self.client_secret = client_secret
         self.redirect_uri  = redirect_uri
+        self.modo_prueba   = modo_prueba
         self.sp            = None
         self.headers       = None
         self.usuario       = None
+        self._req_lock     = threading.Lock()
 
     # ------------------------------------------------------------------
     # AUTENTICACIÓN
@@ -81,15 +96,23 @@ class SpotifyService:
         canciones = []
         pais      = self.usuario.get("country", "US")
 
+        limite = MP_BIBLIO_MAX if self.modo_prueba else None
+
         resultado = self.sp.current_user_saved_tracks(limit=50, market=pais)
         total     = resultado["total"]
+        if limite is not None:
+            total = min(total, limite)
         canciones.extend(resultado["items"])
 
-        while resultado["next"]:
+        while resultado["next"] and (limite is None or len(canciones) < limite):
             resultado = self.sp.next(resultado)
-            canciones.extend(resultado["items"])
+            chunk = resultado["items"]
+            if limite is not None:
+                rest = limite - len(canciones)
+                chunk = chunk[:rest]
+            canciones.extend(chunk)
             if callback:
-                prog = len(canciones) / total
+                prog = len(canciones) / max(total, 1)
                 callback(prog * 0.4, f"Descargando biblioteca: {len(canciones)}/{total}")
 
         return canciones
@@ -150,52 +173,113 @@ class SpotifyService:
     def buscar_artista(self, nombre: str) -> List[dict]:
         """Busca artistas por nombre en Spotify."""
         self._renovar_headers()
+        lim = MP_BUSQUEDA_ARTISTAS if self.modo_prueba else 8
         try:
-            resultado = self.sp.search(q=nombre, type="artist", limit=5)
+            resultado = self.sp.search(q=nombre, type="artist", limit=lim)
             return resultado["artists"]["items"]
         except Exception as e:
             print(f"SPOTIFY: Error búsqueda artista: {e}")
             return []
 
+    def _album_tracks_rest(self, album_id: str) -> List[dict]:
+        """Tracks de un álbum vía REST (uso concurrente con lock en headers)."""
+        items: List[dict] = []
+        url = f"https://api.spotify.com/v1/albums/{album_id}/tracks?limit=50"
+        while url:
+            with self._req_lock:
+                self._renovar_headers()
+                resp = requests.get(url, headers=self.headers, timeout=15)
+            if resp.status_code != 200:
+                break
+            datos = resp.json()
+            items.extend(datos.get("items", []))
+            url = datos.get("next")
+        return items
+
+    @staticmethod
+    def _track_uri(track: dict) -> Optional[str]:
+        u = track.get("uri")
+        if u:
+            return u
+        tid = track.get("id")
+        return f"spotify:track:{tid}" if tid else None
+
     def obtener_canciones_artista_spotify(
         self, artist_id: str, cantidad: int = 50, callback: Callable = None
     ) -> List[str]:
         """
-        Obtiene URIs de canciones de un artista desde toda la discografía en Spotify.
-        Recorre álbumes → canciones, eliminando duplicados.
+        URIs de canciones del artista (álbumes + singles, sin duplicados por título).
+        Fuera de modo prueba usa varias peticiones en paralelo para acelerar.
         """
         self._renovar_headers()
-        uris_unicos = []
+        if self.modo_prueba:
+            cantidad = min(cantidad, MP_ARTIST_TRACKS_MAX)
+
+        uris_unicos: List[str] = []
         nombres_vistos = set()
+        state = threading.Lock()
 
         try:
-            # Obtenemos álbumes del artista
-            albumes = []
+            albumes_max = MP_ARTIST_ALBUMS_MAX if self.modo_prueba else 200
+            albumes: List[dict] = []
             resp = self.sp.artist_albums(
                 artist_id, album_type="album,single", limit=50
             )
             albumes.extend(resp["items"])
-            while resp["next"] and len(albumes) < 200:
+            while resp["next"] and len(albumes) < albumes_max:
                 resp = self.sp.next(resp)
                 albumes.extend(resp["items"])
-
+            albumes = albumes[:albumes_max]
             total_albumes = len(albumes)
-            for idx, album in enumerate(albumes):
-                if len(uris_unicos) >= cantidad:
-                    break
+            if total_albumes == 0:
+                return []
 
-                tracks_resp = self.sp.album_tracks(album["id"], limit=50)
-                for track in tracks_resp["items"]:
-                    nombre_norm = track["name"].lower().strip()
-                    if nombre_norm not in nombres_vistos:
+            def incorporar(tracks: List[dict]) -> bool:
+                """True si ya se alcanzó cantidad."""
+                with state:
+                    for track in tracks:
+                        if len(uris_unicos) >= cantidad:
+                            return True
+                        nombre_norm = track["name"].lower().strip()
+                        if nombre_norm in nombres_vistos:
+                            continue
+                        uri = self._track_uri(track)
+                        if not uri:
+                            continue
                         nombres_vistos.add(nombre_norm)
-                        uris_unicos.append(track["uri"])
+                        uris_unicos.append(uri)
+                    return len(uris_unicos) >= cantidad
 
-                if callback:
-                    prog = (idx + 1) / total_albumes
-                    callback(prog, f"Explorando discografía: {idx+1}/{total_albumes} álbumes")
+            def uno(album: dict) -> None:
+                tracks = self._album_tracks_rest(album["id"])
+                incorporar(tracks)
 
-                time.sleep(0.05)
+            workers = 1 if self.modo_prueba else min(4, total_albumes)
+            if workers <= 1:
+                for idx, album in enumerate(albumes):
+                    if incorporar(self._album_tracks_rest(album["id"])):
+                        break
+                    if callback:
+                        callback(
+                            (idx + 1) / total_albumes,
+                            f"Explorando discografía: {idx+1}/{total_albumes} álbumes",
+                        )
+            else:
+                hecho = [0]
+
+                def worker(album: dict):
+                    uno(album)
+                    with state:
+                        hecho[0] += 1
+                        h = hecho[0]
+                    if callback:
+                        callback(
+                            h / total_albumes,
+                            f"Explorando discografía: {h}/{total_albumes} álbumes",
+                        )
+
+                with ThreadPoolExecutor(max_workers=workers) as ex:
+                    list(ex.map(worker, albumes))
 
         except Exception as e:
             print(f"SPOTIFY: Error obteniendo canciones del artista: {e}")
@@ -250,7 +334,7 @@ class SpotifyService:
                 json={
                     "name": nombre,
                     "public": False,
-                    "description": descripcion or f"Creada por SyncNode 2.0"
+                    "description": descripcion or "Creada con SyncNode (Klyro)"
                 },
                 timeout=10
             )

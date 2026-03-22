@@ -19,7 +19,8 @@ def cargar_config() -> dict:
         "client_id":      "",
         "client_secret":  "",
         "redirect_uri":   "http://127.0.0.1:8888/callback",
-        "lastfm_api_key": ""
+        "lastfm_api_key": "",
+        "modo_prueba":    False,
     }
     if not os.path.exists(CONFIG_FILE):
         with open(CONFIG_FILE, "w") as f:
@@ -27,7 +28,8 @@ def cargar_config() -> dict:
                 "client_id":      "TU_CLIENT_ID_AQUI",
                 "client_secret":  "TU_CLIENT_SECRET_AQUI",
                 "redirect_uri":   "http://127.0.0.1:8888/callback",
-                "lastfm_api_key": "TU_LASTFM_KEY_AQUI_OPCIONAL"
+                "lastfm_api_key": "TU_LASTFM_KEY_AQUI_OPCIONAL",
+                "modo_prueba":    True,
             }, f, indent=2)
         print(f"Se creó {CONFIG_FILE}. Completa tus credenciales y vuelve a ejecutar.")
         sys.exit(0)
@@ -57,7 +59,8 @@ def main():
     spotify = SpotifyService(
         client_id=config["client_id"],
         client_secret=config["client_secret"],
-        redirect_uri=config["redirect_uri"]
+        redirect_uri=config["redirect_uri"],
+        modo_prueba=bool(config.get("modo_prueba", False)),
     )
 
     lastfm = None
